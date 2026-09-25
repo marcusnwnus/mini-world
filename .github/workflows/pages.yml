@@ -30,6 +30,9 @@ jobs:
       - name: Build rigged mouse GLB
         run: python tools/build_mouse_glb.py
 
+      - name: Build sky texture
+        run: python tools/build_sky.py
+
       - name: Upload static site
         uses: actions/upload-pages-artifact@v3
         with:
