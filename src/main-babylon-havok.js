@@ -11,7 +11,11 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
   ]);
 
   const WORLD_HALF = 32;
-  const CREATURE_COUNT = 20;
+  const CREATURE_COUNT = 18;
+  const FORAGE_COUNT = 12;
+  const BEETLE = Object.freeze({
+    name:"Beetle", icon:"🪲", hp:6, reward:6, heal:5, speed:4.4, range:.65, scale:.34
+  });
   const SPAWN_SHIELD = 3;
   const SAVE_KEY = "mini-world-evolution-babylon-v1";
 
@@ -54,6 +58,7 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
   let engine, scene, camera, shadowGenerator, mats, physicsPlugin;
   let obstacles = [];
   let creatures = [];
+  let forage = [];
   let currentTarget = null;
   let started = false;
   let paused = true;
@@ -115,7 +120,10 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
       foxLight:mat("foxLight","#F0C49B"),
       wolf:mat("wolf","#66727C"),
       wolfLight:mat("wolfLight","#B9C1C5"),
-      dark:mat("dark","#17191B")
+      dark:mat("dark","#17191B"),
+      beetleShell:mat("beetleShell","#3E2A1F"),
+      beetleWing:mat("beetleWing","#6B4934"),
+      beetleLeg:mat("beetleLeg","#241A16")
     };
   }
 
@@ -133,6 +141,34 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
     mesh.position.set(position[0],position[1],position[2]);
     mesh.scaling.set(scaling[0],scaling[1],scaling[2]);
     return mesh;
+  }
+
+  function createBeetleModel(){
+    const root=new BABYLON.TransformNode("beetle",scene);
+    const body=sphere("beetle-body",root,mats.beetleShell,[0,.12,0],[.72,.45,1.15],.62);
+    const wingLeft=sphere("beetle-wing-left",root,mats.beetleWing,[-.12,.18,-.03],[.5,.22,.92],.48);
+    const wingRight=sphere("beetle-wing-right",root,mats.beetleWing,[.12,.18,-.03],[.5,.22,.92],.48);
+    sphere("beetle-head",root,mats.beetleShell,[0,.12,.34],[.72,.58,.7],.34);
+    for(const side of [-1,1]){
+      for(const z of [-.18,.02,.22]){
+        const leg=BABYLON.MeshBuilder.CreateBox("beetle-leg",{width:.24,height:.035,depth:.04},scene);
+        leg.parent=root;
+        leg.material=mats.beetleLeg;
+        leg.position.set(side*.26,.075,z);
+        leg.rotation.y=side*(.3+z*.3);
+      }
+    }
+    root.scaling.setAll(BEETLE.scale);
+    root.metadata={
+      animate:function(time,speed){
+        const stride=Math.min(1,(speed||0)/BEETLE.speed);
+        body.position.y=.12+Math.sin(time*18)*.015*stride;
+        wingLeft.rotation.z=.05+Math.sin(time*20)*.035*stride;
+        wingRight.rotation.z=-.05-Math.sin(time*20)*.035*stride;
+      }
+    };
+    addShadowCaster(root);
+    return root;
   }
 
   function createRabbitModel(){
@@ -431,6 +467,43 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
     }
   }
 
+  function spawnForage(slot){
+    disposeNode(slot.root);
+    slot.root=createBeetleModel();
+    slot.root.position.copyFrom(randomSpawn(3));
+    slot.root.position.y=0;
+    slot.root.rotation.y=rand(-Math.PI,Math.PI);
+    slot.hp=BEETLE.hp;
+    slot.maxHp=BEETLE.hp;
+    slot.alive=true;
+    slot.respawnTimer=0;
+    slot.wanderTimer=0;
+    slot.wanderAngle=rand(-Math.PI,Math.PI);
+    slot.hitTimer=0;
+  }
+
+  function createForage(){
+    forage=[];
+    for(let i=0;i<FORAGE_COUNT;i++){
+      const slot={root:null,alive:false,kind:"forage"};
+      forage.push(slot);
+      spawnForage(slot);
+    }
+  }
+
+  function killForage(item){
+    if(!item.alive) return;
+    item.alive=false;
+    item.root.setEnabled(false);
+    item.respawnTimer=rand(4,7);
+    player.kills++;
+    player.xp+=BEETLE.reward;
+    player.hp=Math.min(tier().hp,player.hp+BEETLE.heal);
+    toast("Ate Beetle · +"+BEETLE.reward+" XP · +"+BEETLE.heal+" HP","good");
+    if(navigator.vibrate) navigator.vibrate(12);
+    saveProgress();
+  }
+
   function killCreature(creature,playerKill){
     if(!creature.alive) return;
     creature.alive=false;
@@ -508,6 +581,7 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
     createPlayerCollider(new BABYLON.Vector3(0,.75,0));
     await replacePlayerModel();
     createCreatures();
+    createForage();
     updateCamera(1);
     updateHUD(true);
   }
@@ -690,6 +764,47 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
     }
   }
 
+  function updateForage(item,dt,time){
+    if(!item.alive){
+      item.respawnTimer-=dt;
+      if(item.respawnTimer<=0) spawnForage(item);
+      return;
+    }
+
+    item.hitTimer=Math.max(0,item.hitTimer-dt);
+    const toPlayer=player.root.position.subtract(item.root.position);
+    const d=toPlayer.length();
+    let dir;
+
+    if(!player.dead&&d<5.5){
+      dir=toPlayer.scale(-1);
+    }else{
+      item.wanderTimer-=dt;
+      if(item.wanderTimer<=0){
+        item.wanderTimer=rand(.8,2.2);
+        item.wanderAngle+=rand(-1.7,1.7);
+      }
+      dir=new BABYLON.Vector3(Math.sin(item.wanderAngle),0,Math.cos(item.wanderAngle));
+    }
+
+    if(dir.lengthSquared()>.0001){
+      dir.normalize();
+      item.root.position.addInPlace(dir.scale(BEETLE.speed*dt*(d<5.5?1:.35)));
+      resolveObstacleCollisions(item.root.position,.2);
+      const max=WORLD_HALF-2.2;
+      item.root.position.x=clamp(item.root.position.x,-max,max);
+      item.root.position.z=clamp(item.root.position.z,-max,max);
+      const desired=Math.atan2(dir.x,dir.z);
+      item.root.rotation.y+=shortestAngle(item.root.rotation.y,desired)*Math.min(1,dt*10);
+    }
+
+    const pulse=item.hitTimer>0?1.18:1;
+    item.root.scaling.setAll(BEETLE.scale*pulse);
+    if(item.root.metadata&&item.root.metadata.animate){
+      item.root.metadata.animate(time,reducedMotion?0:BEETLE.speed);
+    }
+  }
+
   function selectTarget(){
     if(player.dead) return null;
     let best=null,bestScore=Infinity;
@@ -703,6 +818,16 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
       const facing=BABYLON.Vector3.Dot(forward,offset);
       const score=d+(facing<-.15?5:0);
       if(score<bestScore){bestScore=score;best=c;}
+    });
+    forage.forEach(function(item){
+      if(!item.alive) return;
+      const offset=item.root.position.subtract(player.root.position);
+      const d=offset.length();
+      if(d>5) return;
+      offset.normalize();
+      const facing=BABYLON.Vector3.Dot(forward,offset);
+      const score=d*.82+(facing<-.15?4:0);
+      if(score<bestScore){bestScore=score;best=item;}
     });
     return best;
   }
@@ -725,10 +850,25 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
       if(BABYLON.Vector3.Dot(forward,to)<-.05) return;
       best=c;bestD=d;
     });
+    forage.forEach(function(item){
+      if(!item.alive) return;
+      const to=item.root.position.subtract(player.root.position);
+      const d=to.length();
+      if(d>Math.min(bestD,cfg.range+.45)) return;
+      to.normalize();
+      if(BABYLON.Vector3.Dot(forward,to)<-.08) return;
+      best=item;bestD=d;
+    });
 
     if(best){
-      damageCreature(best,cfg.damage,true);
-      best.aggressive=true;
+      if(best.kind==="forage"){
+        best.hp=Math.max(0,best.hp-cfg.damage);
+        best.hitTimer=.12;
+        if(best.hp<=0) killForage(best);
+      }else{
+        damageCreature(best,cfg.damage,true);
+        best.aggressive=true;
+      }
       cameraShake=.09;
     }
     updateHUD(true);
@@ -799,7 +939,11 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
       return;
     }
     ui.targetCard.hidden=false;
-    ui.targetName.textContent=TIERS[currentTarget.tier].icon+" "+TIERS[currentTarget.tier].name;
+    if(currentTarget.kind==="forage"){
+      ui.targetName.textContent=BEETLE.icon+" "+BEETLE.name+" · prey";
+    }else{
+      ui.targetName.textContent=TIERS[currentTarget.tier].icon+" "+TIERS[currentTarget.tier].name;
+    }
     ui.targetHealth.style.width=(currentTarget.hp/currentTarget.maxHp*100)+"%";
   }
 
@@ -835,6 +979,7 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
     hudTimer=Math.max(0,hudTimer-dt);
     updatePlayer(dt,elapsed);
     creatures.forEach(function(c){ updateCreature(c,dt,elapsed); });
+    forage.forEach(function(item){ updateForage(item,dt,elapsed); });
     updateCamera(dt);
     updateHUD(false);
   }
