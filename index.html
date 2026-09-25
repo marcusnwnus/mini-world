@@ -67,14 +67,14 @@
 
     <section class="overlay show" id="startOverlay" aria-labelledby="startTitle">
       <div class="panel">
-        <div class="eyebrow">3D survival evolution MVP</div>
+        <div class="eyebrow">Babylon.js 3D survival MVP</div>
         <h1 id="startTitle">Mini World: Evolution</h1>
         <p>Start as a mouse. Hunt weaker animals, survive predators, gain XP and evolve. If you die, you respawn one evolution tier lower.</p>
         <div class="evolution-path" aria-label="Evolution path">
           <span>🐭 Mouse</span><i>→</i><span>🐇 Rabbit</span><i>→</i><span>🦊 Fox</span><i>→</i><span>🐺 Wolf</span>
         </div>
         <button id="playBtn" class="primary" type="button">Play</button>
-        <p class="tiny">The mouse is a reusable low-poly 3D model built from geometry in <code>src/mouse.js</code>.</p>
+        <p class="tiny">The mouse is a reusable Babylon.js low-poly model built from geometry in <code>src/mouse.js</code>.</p>
       </div>
     </section>
 
@@ -88,6 +88,8 @@
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
   </main>
 
-  <script type="module" src="src/main.js?v=3d-20260925"></script>
+  <script src="https://cdn.jsdelivr.net/npm/babylonjs@9.27.1/babylon.min.js"></script>
+  <script src="src/mouse.js?v=babylon-1"></script>
+  <script src="src/main-babylon.js?v=babylon-1"></script>
 </body>
 </html>
