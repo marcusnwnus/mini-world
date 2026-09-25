@@ -209,7 +209,7 @@ gltf = {
         {"name": "TailJoint", "translation": [0,.52,-.90]},
         {"name": "MouseMesh", "mesh": 0, "skin": 0}
     ],
-    "skins": [{"name": "MouseRig", "inverseBindMatrices": ibm_acc, "joints": [1,2,3], "skeleton": 1}],
+    "skins": [{"name": "MouseRig", "inverseBindMatrices": ibm_acc, "joints": [1,2,3], "skeleton": 0}],
     "meshes": [{
         "name": "Mouse",
         "primitives": [{
