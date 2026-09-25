@@ -135,7 +135,7 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
     tex.vOffset=1;
     skyMat.emissiveTexture=tex;
     sky.material=skyMat;
-    sky.rotation.y=Math.PI;
+    sky.rotation.y=Math.PI * 0.5;
     sky.renderingGroupId=0;
   }
 
