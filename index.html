@@ -66,7 +66,7 @@
   .stats-inline { color:var(--muted); font-size:14px; }
   canvas {
     width:100%;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 12 / 7;
     display:block;
     border-radius:14px;
     background:#0d1723;
@@ -340,7 +340,7 @@
         <strong>Ecosystem</strong>
         <div class="stats-inline">Tap a tile after choosing a tool</div>
       </div>
-      <canvas id="world" width="720" height="720" aria-label="ecosystem simulation"></canvas>
+      <canvas id="world" width="960" height="560" aria-label="2.5D isometric ecosystem simulation"></canvas>
     </section>
 
     <aside class="sidebar">
@@ -412,8 +412,40 @@
   const SAVE_KEY = "mini-world-v1";
   const canvas = document.getElementById("world");
   const ctx = canvas.getContext("2d");
-  const cell = canvas.width / N;
   const $ = id => document.getElementById(id);
+  const TILE_W = 28;
+  const TILE_H = 14;
+  const LAND_Z = 7;
+  const ORIGIN_X = canvas.width / 2;
+  const ORIGIN_Y = 58;
+  let hoverTile = null;
+
+  function isoPoint(x, y, z=0) {
+    return {
+      x: ORIGIN_X + (x - y) * TILE_W / 2,
+      y: ORIGIN_Y + (x + y) * TILE_H / 2 - z
+    };
+  }
+
+  function tileCenter(x, y, z=0) {
+    return isoPoint(x + .5, y + .5, z);
+  }
+
+  function diamondPath(x, y, z=0) {
+    const a=isoPoint(x,y,z), b=isoPoint(x+1,y,z), c=isoPoint(x+1,y+1,z), d=isoPoint(x,y+1,z);
+    ctx.beginPath();
+    ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.lineTo(d.x,d.y); ctx.closePath();
+  }
+
+  function screenToTile(sx, sy) {
+    const dx = sx - ORIGIN_X;
+    const dy = sy - ORIGIN_Y + LAND_Z * .5;
+    const gx = dx / TILE_W + dy / TILE_H;
+    const gy = dy / TILE_H - dx / TILE_W;
+    const x = Math.floor(gx), y = Math.floor(gy);
+    if(x<0 || y<0 || x>=N || y>=N) return null;
+    return {x,y};
+  }
 
   let grid = [];
   let animals = [];
@@ -491,7 +523,7 @@
   }
 
   function stepToward(a, target) {
-    const opts = validNeighbors(a.x,a.y).filter(([x,y]) => !animalAt(x,y));
+    const opts = validNeighbors(a.x,a.y).filter(([x,y]) => !animalAt(x,y) || (a.type==="carn" && !!animalAt(x,y,"herb")));
     if(!opts.length) return;
     let chosen;
     if(target) {
@@ -636,47 +668,133 @@
     $("pauseBtn").textContent=paused?"▶ Resume":"⏸ Pause";
   }
 
+  function drawTile(x,y,c) {
+    const z = c.terrain==="land" ? LAND_Z : 0;
+    const top=isoPoint(x,y,z), right=isoPoint(x+1,y,z), bottom=isoPoint(x+1,y+1,z), left=isoPoint(x,y+1,z);
+
+    if(c.terrain==="land") {
+      const rb=isoPoint(x+1,y+1,0), rr=isoPoint(x+1,y,0), ll=isoPoint(x,y+1,0);
+      ctx.fillStyle="#263f2e";
+      ctx.beginPath(); ctx.moveTo(right.x,right.y); ctx.lineTo(bottom.x,bottom.y); ctx.lineTo(rb.x,rb.y); ctx.lineTo(rr.x,rr.y); ctx.closePath(); ctx.fill();
+      ctx.fillStyle="#1e3427";
+      ctx.beginPath(); ctx.moveTo(left.x,left.y); ctx.lineTo(bottom.x,bottom.y); ctx.lineTo(rb.x,rb.y); ctx.lineTo(ll.x,ll.y); ctx.closePath(); ctx.fill();
+
+      const m=c.moisture;
+      const r=Math.round(44 + m*16), g=Math.round(78 + m*32), b=Math.round(48 + m*10);
+      ctx.fillStyle="rgb("+r+","+g+","+b+")";
+    } else {
+      const wave=(Math.sin((x+y+tick*.2)*.9)+1)*.5;
+      ctx.fillStyle="rgb("+Math.round(35+wave*12)+","+Math.round(91+wave*16)+","+Math.round(166+wave*24)+")";
+    }
+
+    diamondPath(x,y,z);
+    ctx.fill();
+    ctx.strokeStyle=c.terrain==="land" ? "rgba(13,30,18,.45)" : "rgba(155,210,255,.12)";
+    ctx.lineWidth=1;
+    ctx.stroke();
+
+    if(c.terrain==="water") {
+      const cc=tileCenter(x,y,0);
+      ctx.strokeStyle="rgba(205,235,255,.18)";
+      ctx.beginPath(); ctx.moveTo(cc.x-4,cc.y);ctx.lineTo(cc.x+4,cc.y);ctx.stroke();
+    }
+  }
+
+  function drawPlant(x,y,c) {
+    if(c.terrain!=="land" || c.plant<=.08) return;
+    const p=tileCenter(x,y,LAND_Z);
+    const h=3 + c.plant*10;
+    ctx.strokeStyle="#244f2b";
+    ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(p.x,p.y+1);ctx.lineTo(p.x,p.y-h);ctx.stroke();
+
+    const r=2.5+c.plant*3.2;
+    ctx.fillStyle="#2f9147";
+    for(const [ox,oy,k] of [[-3,-1,1],[3,0,.95],[0,-4,1.12]]) {
+      ctx.beginPath(); ctx.arc(p.x+ox,p.y-h+oy,r*k,0,Math.PI*2);ctx.fill();
+    }
+    ctx.fillStyle="#76df7d";
+    ctx.beginPath();ctx.arc(p.x-1,p.y-h-5,r*.55,0,Math.PI*2);ctx.fill();
+  }
+
+  function drawAnimal(a) {
+    const p=tileCenter(a.x,a.y,LAND_Z);
+    const isHerb=a.type==="herb";
+
+    ctx.fillStyle="rgba(0,0,0,.22)";
+    ctx.beginPath();ctx.ellipse(p.x,p.y+3,7,3,0,0,Math.PI*2);ctx.fill();
+
+    ctx.save();
+    ctx.translate(p.x,p.y-4);
+    ctx.fillStyle=isHerb ? "#f4c65e" : "#e86d67";
+    ctx.beginPath();ctx.ellipse(0,0,isHerb?6.5:7.5,isHerb?5:5.5,-.12,0,Math.PI*2);ctx.fill();
+
+    ctx.fillStyle=isHerb ? "#ffe09a" : "#ffaaa5";
+    ctx.beginPath();ctx.arc(4,-3,isHerb?3.4:3.8,0,Math.PI*2);ctx.fill();
+
+    if(isHerb) {
+      ctx.strokeStyle="#f4c65e";ctx.lineWidth=2;
+      ctx.beginPath();ctx.moveTo(3,-6);ctx.lineTo(2,-11);ctx.moveTo(6,-6);ctx.lineTo(8,-10);ctx.stroke();
+    } else {
+      ctx.fillStyle="#d95753";
+      ctx.beginPath();ctx.moveTo(2,-6);ctx.lineTo(4,-11);ctx.lineTo(6,-6);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.moveTo(6,-6);ctx.lineTo(9,-10);ctx.lineTo(9,-4);ctx.closePath();ctx.fill();
+      ctx.strokeStyle="#d95753";ctx.lineWidth=2.5;
+      ctx.beginPath();ctx.moveTo(-6,1);ctx.quadraticCurveTo(-11,-2,-9,-6);ctx.stroke();
+    }
+
+    ctx.fillStyle="#152034";
+    ctx.beginPath();ctx.arc(5,-4,1.1,0,Math.PI*2);ctx.fill();
+    ctx.restore();
+  }
+
+  function drawSelection(x,y) {
+    if(!hoverTile) return;
+    if(hoverTile.x!==x || hoverTile.y!==y) return;
+    const c=grid[y][x];
+    const z=c.terrain==="land"?LAND_Z:0;
+    diamondPath(x,y,z);
+    ctx.fillStyle="rgba(123,166,255,.16)";
+    ctx.fill();
+    ctx.strokeStyle="rgba(180,210,255,.95)";
+    ctx.lineWidth=2;
+    ctx.stroke();
+  }
+
   function draw() {
     ctx.clearRect(0,0,canvas.width,canvas.height);
-    for(let y=0;y<N;y++) for(let x=0;x<N;x++) {
-      const c=grid[y][x], px=x*cell, py=y*cell;
-      if(c.terrain==="water") {
-        const wave=Math.sin((x+y+tick*.25)*.7)*7;
-        ctx.fillStyle="rgb("+(45+wave)+","+(101+wave)+","+(190+wave)+")";
-      } else {
-        const moisture=c.moisture*22;
-        ctx.fillStyle="rgb("+(54-moisture*.25)+","+(79+moisture)+","+(51-moisture*.08)+")";
-      }
-      ctx.fillRect(px,py,cell+1,cell+1);
-      if(c.terrain==="land"&&c.plant>.08) {
-        const r=2.5+5*c.plant;
-        ctx.fillStyle="#57c96f";
-        ctx.beginPath(); ctx.arc(px+cell*.5,py+cell*.53,r,0,Math.PI*2); ctx.fill();
-        if(c.plant>.72) {
-          ctx.fillStyle="#9ee493";
-          ctx.beginPath(); ctx.arc(px+cell*.63,py+cell*.38,2.1,0,Math.PI*2); ctx.fill();
-        }
+
+    const bg=ctx.createLinearGradient(0,0,0,canvas.height);
+    bg.addColorStop(0,"#10243a");
+    bg.addColorStop(1,"#081522");
+    ctx.fillStyle=bg;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    const animalsByTile=new Map();
+    for(const a of animals) {
+      const key=a.x+","+a.y;
+      if(!animalsByTile.has(key)) animalsByTile.set(key,[]);
+      animalsByTile.get(key).push(a);
+    }
+
+    for(let sum=0;sum<=2*(N-1);sum++) {
+      for(let x=0;x<N;x++) {
+        const y=sum-x;
+        if(y<0 || y>=N) continue;
+        const c=grid[y][x];
+        drawTile(x,y,c);
+        drawPlant(x,y,c);
+        const list=animalsByTile.get(x+","+y);
+        if(list) list.forEach(drawAnimal);
+        drawSelection(x,y);
       }
     }
 
-    animals.forEach(a=>{
-      const cx=a.x*cell+cell/2, cy=a.y*cell+cell/2;
-      ctx.fillStyle=a.type==="herb"?"#f6c453":"#ef6f6c";
-      ctx.beginPath(); ctx.arc(cx,cy,cell*.31,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle="#0b1020";
-      ctx.beginPath(); ctx.arc(cx+cell*.1,cy-cell*.05,1.6,0,Math.PI*2); ctx.fill();
-      if(a.type==="carn") {
-        ctx.strokeStyle="#ffd5d3"; ctx.lineWidth=1.5;
-        ctx.beginPath(); ctx.moveTo(cx-cell*.14,cy-cell*.24);ctx.lineTo(cx-cell*.03,cy-cell*.39);ctx.lineTo(cx+cell*.02,cy-cell*.21);ctx.stroke();
-      }
-    });
-
-    ctx.strokeStyle="rgba(255,255,255,.035)";
-    ctx.lineWidth=1;
-    for(let i=0;i<=N;i++) {
-      ctx.beginPath(); ctx.moveTo(i*cell,0);ctx.lineTo(i*cell,canvas.height);ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(0,i*cell);ctx.lineTo(canvas.width,i*cell);ctx.stroke();
-    }
+    const vignette=ctx.createRadialGradient(canvas.width/2,canvas.height*.52,120,canvas.width/2,canvas.height*.52,520);
+    vignette.addColorStop(0,"rgba(0,0,0,0)");
+    vignette.addColorStop(1,"rgba(0,0,0,.26)");
+    ctx.fillStyle=vignette;
+    ctx.fillRect(0,0,canvas.width,canvas.height);
   }
 
   function save() {
@@ -693,11 +811,26 @@
     } catch(e) { return false; }
   }
 
-  canvas.addEventListener("pointerdown", e=>{
+  function pointerTile(e) {
     const rect=canvas.getBoundingClientRect();
-    const x=Math.floor((e.clientX-rect.left)/rect.width*N);
-    const y=Math.floor((e.clientY-rect.top)/rect.height*N);
-    if(x<0||y<0||x>=N||y>=N||grid[y][x].terrain==="water") return;
+    const sx=(e.clientX-rect.left)/rect.width*canvas.width;
+    const sy=(e.clientY-rect.top)/rect.height*canvas.height;
+    return screenToTile(sx,sy);
+  }
+
+  canvas.addEventListener("pointermove", e=>{
+    if(e.pointerType==="touch") return;
+    hoverTile=pointerTile(e);
+    draw();
+  });
+  canvas.addEventListener("pointerleave", ()=>{ hoverTile=null; draw(); });
+
+  canvas.addEventListener("pointerdown", e=>{
+    const t=pointerTile(e);
+    if(!t) return;
+    const {x,y}=t;
+    hoverTile=t;
+    if(grid[y][x].terrain==="water") { draw(); return; }
     if(selectedTool==="plant") {
       grid[y][x].plant=1; grid[y][x].moisture=Math.max(.7,grid[y][x].moisture);
     } else if(selectedTool==="herb") {
