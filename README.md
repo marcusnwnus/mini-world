@@ -1,29 +1,39 @@
 # Mini World
 
-Mini World is a browser-based ecosystem balancing game. Plants feed herbivores, herbivores feed carnivores, and every population competes for a limited habitat.
+Mini World is a mobile-first 2.5D ecosystem balancing game that runs entirely in the browser.
 
-## Play
+**Play:** https://marcusnwnus.github.io/mini-world/
 
-Open `index.html` locally, or deploy the repository as a static site.
+## Game loop
 
-### Cloudflare Pages
+Plants feed herbivores, herbivores feed carnivores, and the player spends limited **Eco Points** to intervene without destabilizing the food web.
 
-1. Create a Pages project and connect this GitHub repository.
-2. Framework preset: **None**.
-3. Build command: leave blank.
-4. Build output directory: `/` (repository root).
+Your first stewardship goal is to keep the ecosystem at **75%+ stability for 15 consecutive days** while all three trophic levels remain alive. After completing it, the simulation continues in endless mode.
 
-### GitHub Pages
+### Systems
 
-If your GitHub plan/repository visibility supports Pages, publish from the `main` branch and repository root.
+- 2.5D isometric ecosystem with touch-friendly tile interaction
+- Vegetation growth, grazing, predation, reproduction, aging and starvation
+- Four seasons that alter growth and moisture
+- Random ecosystem events such as droughts, wild blooms and migration
+- Eco Points that regenerate based on ecosystem health
+- 1× / 2× simulation speed and pause controls
+- Versioned local autosave
+- Automatic pause when the browser tab becomes hidden
+- Responsive portrait and landscape mobile layouts
+- Reduced-motion accessibility support
 
-## How the ecosystem works
+## Project structure
 
-- Vegetation regrows on fertile land and can spread into nearby empty cells.
-- Herbivores move toward food, eat plants, lose energy, reproduce, and can starve.
-- Carnivores move toward herbivores, hunt, lose energy, reproduce, and can starve.
-- The player can plant vegetation, introduce animals, trigger rain, remove animals, and pause the simulation.
-- The Stability score rewards an ecosystem where all three trophic levels remain healthy.
-- The game autosaves to the browser with `localStorage`.
+- `index.html` — semantic HUD and game shell
+- `styles.css` — responsive/mobile UI
+- `game.js` — simulation state, fixed-step game loop, rendering and input
+- `.github/workflows/pages.yml` — automatic GitHub Pages deployment
 
-No backend, build step, package manager, or paid service is required.
+There are no runtime dependencies, package managers, build steps or backend services.
+
+## Deployment
+
+Every push to `main` automatically deploys through GitHub Actions to GitHub Pages.
+
+For Cloudflare Pages, connect this repository with no build command and publish the repository root.
