@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
 <title>Mini World — Ecosystem Balance</title>
 <style>
   :root {
@@ -125,6 +125,203 @@
     .sidebar { grid-template-columns:1fr; }
     .world-card { padding:8px; }
   }
+
+  /* Mobile-first play mode: keep the full game loop visible inside the dynamic viewport. */
+  html, body { min-height:100%; }
+  body { min-height:100dvh; overscroll-behavior:none; }
+  button { -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+
+  @media (min-width:901px) {
+    .app {
+      min-height:100dvh;
+      display:flex;
+      flex-direction:column;
+      padding-top:clamp(12px,2vh,24px);
+      padding-bottom:clamp(12px,2vh,24px);
+    }
+    .layout { flex:1; min-height:0; align-items:start; }
+    .world-card { max-height:calc(100dvh - 130px); }
+    canvas {
+      width:auto;
+      max-width:100%;
+      height:min(calc(100dvh - 190px), 720px);
+      max-height:720px;
+      margin:0 auto;
+    }
+    footer { margin-top:auto; padding-top:10px; }
+  }
+
+  @media (max-width:700px) {
+    body { overflow:hidden; }
+    .app {
+      width:100%;
+      height:100dvh;
+      min-height:100dvh;
+      padding:
+        max(6px, env(safe-area-inset-top))
+        max(7px, env(safe-area-inset-right))
+        max(6px, env(safe-area-inset-bottom))
+        max(7px, env(safe-area-inset-left));
+      display:flex;
+      flex-direction:column;
+      overflow:hidden;
+    }
+    header {
+      flex:0 0 auto;
+      min-height:42px;
+      margin:0 2px 6px;
+      align-items:center;
+      flex-direction:row;
+      gap:8px;
+    }
+    h1 {
+      margin:0;
+      font-size:24px;
+      line-height:1;
+      letter-spacing:-.035em;
+    }
+    .sub { display:none; }
+    .badge {
+      margin-left:auto;
+      padding:6px 9px;
+      font-size:12px;
+    }
+    .layout {
+      flex:1 1 auto;
+      min-height:0;
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+      overflow:hidden;
+    }
+    .card { border-radius:13px; box-shadow:none; }
+    .world-card {
+      flex:1 1 auto;
+      min-height:0;
+      padding:5px;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:flex-start;
+    }
+    .world-head {
+      width:100%;
+      flex:0 0 25px;
+      min-height:25px;
+      padding:1px 3px 4px;
+      font-size:12px;
+    }
+    .stats-inline { font-size:10px; }
+    canvas {
+      width:auto;
+      height:auto;
+      max-width:100%;
+      max-height:calc(100dvh - 329px);
+      aspect-ratio:1;
+      flex:1 1 auto;
+      object-fit:contain;
+      margin:auto;
+      border-radius:9px;
+    }
+    .sidebar {
+      flex:0 0 auto;
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:6px;
+    }
+    .section { padding:7px 8px; }
+    .section h2 {
+      margin:0 0 4px;
+      font-size:11px;
+      line-height:1.1;
+    }
+    .sidebar > .section:nth-child(1),
+    .sidebar > .section:nth-child(2) { min-height:78px; }
+    .sidebar > .section:nth-child(3) { grid-column:1 / -1; }
+    .sidebar > .section:nth-child(4),
+    .sidebar > .section:nth-child(5) { display:none; }
+
+    .score {
+      display:inline-block;
+      margin:0 6px 2px 0;
+      font-size:23px;
+      line-height:1;
+    }
+    .status {
+      display:none;
+      min-height:0;
+    }
+    .bar {
+      height:6px;
+      margin-top:4px !important;
+    }
+    .meters { gap:3px; }
+    .meter-row {
+      grid-template-columns:1fr auto 42%;
+      gap:4px;
+      min-height:16px;
+    }
+    .meter-row .bar {
+      grid-column:3;
+      grid-row:1;
+      margin:0 !important;
+      align-self:center;
+    }
+    .meter-label, .meter-val { font-size:10px; }
+    .controls {
+      grid-template-columns:repeat(4,1fr);
+      gap:5px;
+    }
+    .controls button, .row button {
+      min-height:42px;
+      padding:6px 4px;
+      border-radius:9px;
+      font-size:13px;
+    }
+    .controls button span { display:none; }
+    .row { margin-top:5px; gap:5px; }
+    .row button { min-height:38px; padding:5px; }
+    footer { display:none; }
+  }
+
+  @media (max-width:380px), (max-height:690px) {
+    .app { padding-top:max(3px, env(safe-area-inset-top)); padding-bottom:max(3px, env(safe-area-inset-bottom)); }
+    header { min-height:36px; margin-bottom:4px; }
+    h1 { font-size:21px; }
+    .badge { padding:4px 7px; }
+    .layout, .sidebar { gap:4px; }
+    .world-card { padding:4px; }
+    .world-head { flex-basis:21px; min-height:21px; padding-bottom:2px; }
+    canvas { max-height:calc(100dvh - 287px); }
+    .section { padding:5px 6px; }
+    .sidebar > .section:nth-child(1),
+    .sidebar > .section:nth-child(2) { min-height:64px; }
+    .section h2 { font-size:10px; margin-bottom:3px; }
+    .score { font-size:20px; }
+    .bar { height:5px; }
+    .controls button { min-height:38px; font-size:12px; }
+    .row button { min-height:34px; font-size:12px; }
+  }
+
+  @media (orientation:landscape) and (max-height:600px) {
+    .app { padding:4px max(6px, env(safe-area-inset-right)) 4px max(6px, env(safe-area-inset-left)); }
+    header { min-height:31px; margin-bottom:4px; }
+    h1 { font-size:20px; }
+    .layout {
+      display:grid;
+      grid-template-columns:minmax(0,1fr) minmax(250px,38vw);
+      gap:5px;
+    }
+    .world-card { height:calc(100dvh - 43px); }
+    canvas { max-height:calc(100dvh - 72px); }
+    .sidebar {
+      height:calc(100dvh - 43px);
+      overflow:auto;
+      align-content:start;
+    }
+    .sidebar > .section:nth-child(3) { grid-column:1 / -1; }
+  }
+
 </style>
 </head>
 <body>
@@ -141,7 +338,7 @@
     <section class="card world-card">
       <div class="world-head">
         <strong>Ecosystem</strong>
-        <div class="stats-inline">Click a tile after choosing a tool</div>
+        <div class="stats-inline">Tap a tile after choosing a tool</div>
       </div>
       <canvas id="world" width="720" height="720" aria-label="ecosystem simulation"></canvas>
     </section>
