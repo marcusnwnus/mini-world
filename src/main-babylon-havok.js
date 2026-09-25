@@ -104,6 +104,41 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
     return m;
   }
 
+  function createSky(){
+    if(!window.MiniWorldSkyData) return;
+    const sky=BABYLON.MeshBuilder.CreateSphere("sky",{
+      diameter:115,
+      segments:24,
+      sideOrientation:BABYLON.Mesh.BACKSIDE
+    },scene);
+    sky.infiniteDistance=true;
+    sky.isPickable=false;
+    sky.applyFog=false;
+
+    const skyMat=new BABYLON.StandardMaterial("sky-material",scene);
+    skyMat.disableLighting=true;
+    skyMat.backFaceCulling=false;
+    skyMat.disableDepthWrite=true;
+    skyMat.emissiveColor=new BABYLON.Color3(1,1,1);
+
+    const tex=new BABYLON.Texture(
+      window.MiniWorldSkyData,
+      scene,
+      false,
+      false,
+      BABYLON.Texture.BILINEAR_SAMPLINGMODE
+    );
+    tex.wrapU=BABYLON.Texture.WRAP_ADDRESSMODE;
+    tex.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
+    tex.vScale=-1;
+    tex.vOffset=1;
+    skyMat.emissiveTexture=tex;
+    skyMat.diffuseTexture=tex;
+    sky.material=skyMat;
+    sky.rotation.y=Math.PI;
+    sky.renderingGroupId=0;
+  }
+
   function makeMaterials(){
     mats={
       ground:mat("ground","#6B9D55"),
@@ -575,6 +610,7 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
     shadowGenerator.usePercentageCloserFiltering=true;
     shadowGenerator.bias=.0008;
 
+    createSky();
     makeMaterials();
     buildWorld();
     loadProgress();
