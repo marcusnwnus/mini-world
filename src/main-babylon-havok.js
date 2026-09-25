@@ -105,38 +105,27 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
   }
 
   function createSky(){
-    const sky=BABYLON.MeshBuilder.CreateSphere("sky",{
-      diameter:115,
-      segments:24,
-      sideOrientation:BABYLON.Mesh.BACKSIDE
-    },scene);
-    sky.infiniteDistance=true;
-    sky.isPickable=false;
-    sky.applyFog=false;
-
-    const skyMat=new BABYLON.StandardMaterial("sky-material",scene);
-    skyMat.disableLighting=true;
-    skyMat.backFaceCulling=false;
-    skyMat.disableDepthWrite=true;
-    skyMat.emissiveColor=new BABYLON.Color3(1,1,1);
-
-    const tex=new BABYLON.Texture(
-      "./assets/sky.webp?v=2",
+    // Use a Babylon background layer instead of a mapped sphere.
+    // This guarantees the panorama is visible and avoids UV/projection issues.
+    const layer = new BABYLON.Layer(
+      "sky-background",
+      "./assets/sky.webp?v=4",
       scene,
-      false,
-      false,
-      BABYLON.Texture.BILINEAR_SAMPLINGMODE,
-      function(){ console.info("Sky texture loaded"); },
-      function(message,error){ console.error("Sky texture failed to load",message,error); }
+      true
     );
-    tex.wrapU=BABYLON.Texture.WRAP_ADDRESSMODE;
-    tex.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
-    tex.vScale=-1;
-    tex.vOffset=1;
-    skyMat.emissiveTexture=tex;
-    sky.material=skyMat;
-    sky.rotation.y=Math.PI * 0.5;
-    sky.renderingGroupId=0;
+    layer.isBackground = true;
+    layer.texture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+    layer.texture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+
+    // Keep a pleasant fallback in case the image is unavailable.
+    scene.clearColor = new BABYLON.Color4(.42,.72,.90,1);
+
+    layer.texture.onLoadObservable.addOnce(function(){
+      console.info("Sky background loaded");
+    });
+    layer.texture.onErrorObservable.addOnce(function(message,error){
+      console.error("Sky background failed to load",message,error);
+    });
   }
 
   function makeMaterials(){
@@ -343,7 +332,7 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
   async function loadMouseGLB(){
     const holder=new BABYLON.TransformNode("player-mouse-glb",scene);
     try{
-      const result=await BABYLON.SceneLoader.ImportMeshAsync(null,"./assets/","mouse.glb",scene);
+      const result=await BABYLON.SceneLoader.ImportMeshAsync(null,"./assets/","mouse-v3.glb",scene);
       result.meshes.forEach(function(mesh){
         if(!mesh.parent) mesh.parent=holder;
         if(mesh.getTotalVertices && mesh.getTotalVertices()>0){
