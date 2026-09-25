@@ -177,7 +177,7 @@
         new BABYLON.Vector3(.52,.67,-1.65),
         new BABYLON.Vector3(.35,.53,-1.92)
       ],
-      radius:wolf?.13:.15,tessellation:6,cap:BABYLON.Mesh.CAP_ROUND
+      radius:wolf?.13:.15,tessellation:6,cap:BABYLON.Mesh.CAP_ALL
     },scene);
     tail.parent=root; tail.material=fur;
     root.metadata={
