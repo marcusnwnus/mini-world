@@ -2,108 +2,92 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-  <meta name="theme-color" content="#07111d" />
-  <title>Mini World — Ecosystem Balance</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+  <meta name="theme-color" content="#07131b" />
+  <meta name="description" content="Mini World: Evolution — a lightweight 3D browser survival game." />
+  <title>Mini World: Evolution</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-  <div class="app">
-    <header>
-      <div>
-        <h1>Mini World</h1>
-        <div class="sub">Balance vegetation, herbivores and predators through changing seasons.</div>
-      </div>
-      <div class="header-meta">
-        <div class="badge" id="seasonBadge">🌱 Spring</div>
-        <div class="badge" id="eventBadge" hidden></div>
-        <div class="badge" id="dayBadge">Day 1</div>
-      </div>
-    </header>
+  <main id="gameShell" class="game-shell">
+    <canvas id="game" aria-label="Mini World Evolution 3D game"></canvas>
 
-    <main class="layout">
-      <section class="card world-card">
-        <div class="world-head">
-          <strong>Ecosystem</strong>
-          <div class="hint">Choose a tool, then tap a land tile</div>
+    <section class="hud top-hud" aria-label="Player status">
+      <div class="identity">
+        <div class="species-icon" id="speciesIcon">🐭</div>
+        <div>
+          <strong id="speciesName">Mouse</strong>
+          <span id="tierLabel">Tier 1</span>
         </div>
-        <canvas id="world" width="960" height="560" aria-label="2.5D isometric ecosystem simulation"></canvas>
-      </section>
+      </div>
 
-      <aside class="sidebar">
-        <section class="card section">
-          <div class="top-grid">
-            <div>
-              <h2>Stability</h2>
-              <div class="score"><span id="stability">0</span>%</div>
-            </div>
-            <div>
-              <h2>Eco Points</h2>
-              <div class="eco-points"><strong id="eco">40</strong><span>/ 100</span></div>
-            </div>
-          </div>
-          <div class="status" id="status">Building the first food web…</div>
-          <div class="bar"><div class="fill stability" id="stabilityBar"></div></div>
-        </section>
+      <div class="meters">
+        <div class="meter">
+          <div class="meter-label"><span>Health</span><span id="healthText">45 / 45</span></div>
+          <div class="bar"><div class="fill health" id="healthBar"></div></div>
+        </div>
+        <div class="meter">
+          <div class="meter-label"><span>Evolution XP</span><span id="xpText">0 / 45</span></div>
+          <div class="bar"><div class="fill xp" id="xpBar"></div></div>
+        </div>
+      </div>
 
-        <section class="card section">
-          <h2>Populations</h2>
-          <div class="meters">
-            <div class="meter-row">
-              <div class="meter-label">Vegetation</div><div class="meter-val" id="plantCount">0</div>
-              <div class="bar"><div class="fill plant" id="plantBar"></div></div>
-            </div>
-            <div class="meter-row">
-              <div class="meter-label">Herbivores</div><div class="meter-val" id="herbCount">0</div>
-              <div class="bar"><div class="fill herb" id="herbBar"></div></div>
-            </div>
-            <div class="meter-row">
-              <div class="meter-label">Carnivores</div><div class="meter-val" id="carnCount">0</div>
-              <div class="bar"><div class="fill carn" id="carnBar"></div></div>
-            </div>
-          </div>
-        </section>
+      <div class="stats">
+        <span>🏆 <b id="kills">0</b></span>
+        <span id="protection" hidden>🛡️ Spawn shield</span>
+      </div>
 
-        <section class="card section wide">
-          <h2>Stewardship goal</h2>
-          <div class="mission">
-            <strong id="missionTitle">Hold 75% stability</strong>
-            <span class="small-label" id="missionProgress">0/15 days</span>
-            <div class="mission-copy">Keep all three trophic levels alive while holding the target. Completing it unlocks endless stewardship.</div>
-            <div class="bar"><div class="fill stability" id="missionBar"></div></div>
-          </div>
-        </section>
+      <button id="pauseBtn" class="icon-btn" type="button" aria-label="Pause game">Ⅱ</button>
+    </section>
 
-        <section class="card section wide">
-          <h2>Intervene</h2>
-          <div class="controls">
-            <button data-tool="plant" aria-label="Plant vegetation">🌱 Plant<span class="cost">2 Eco</span></button>
-            <button data-tool="herb" aria-label="Add herbivore">🐇 Herbivore<span class="cost">5 Eco</span></button>
-            <button data-tool="carn" aria-label="Add carnivore">🦊 Carnivore<span class="cost">8 Eco</span></button>
-            <button data-tool="remove" aria-label="Remove organisms">✖ Remove<span class="cost">3 Eco</span></button>
-          </div>
-          <div class="row">
-            <button id="rainBtn">🌧 Rain · 10</button>
-            <button id="pauseBtn">⏸ Pause</button>
-          </div>
-          <div class="row speed">
-            <button data-speed="1" class="active">1×</button>
-            <button data-speed="2">2×</button>
-            <button id="resetBtn">↻ New World</button>
-          </div>
-        </section>
+    <div class="target-card" id="targetCard" hidden>
+      <span id="targetName">Rabbit</span>
+      <div class="target-health"><div id="targetHealth"></div></div>
+    </div>
 
-        <section class="card section">
-          <h2>World log</h2>
-          <div class="log" id="log"></div>
-        </section>
-      </aside>
-    </main>
+    <section class="mobile-controls" aria-label="Game controls">
+      <div class="joystick" id="joystick" aria-label="Movement joystick">
+        <div class="joystick-ring"></div>
+        <div class="joystick-knob" id="joystickKnob"></div>
+      </div>
 
-    <footer>Autosaves locally • pauses when the tab is hidden • no backend required</footer>
-  </div>
+      <div class="action-cluster">
+        <button id="evolveBtn" class="action evolve" type="button" disabled>
+          <span>✨</span>
+          <small>Evolve</small>
+        </button>
+        <button id="attackBtn" class="action attack" type="button">
+          <span>⚔️</span>
+          <small>Attack</small>
+        </button>
+      </div>
+    </section>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script src="game.js" defer></script>
+    <div class="desktop-hint">WASD / arrows to move · Space to attack · E to evolve</div>
+
+    <section class="overlay show" id="startOverlay" aria-labelledby="startTitle">
+      <div class="panel">
+        <div class="eyebrow">3D survival evolution MVP</div>
+        <h1 id="startTitle">Mini World: Evolution</h1>
+        <p>Start as a mouse. Hunt weaker animals, survive predators, gain XP and evolve. If you die, you respawn one evolution tier lower.</p>
+        <div class="evolution-path" aria-label="Evolution path">
+          <span>🐭 Mouse</span><i>→</i><span>🐇 Rabbit</span><i>→</i><span>🦊 Fox</span><i>→</i><span>🐺 Wolf</span>
+        </div>
+        <button id="playBtn" class="primary" type="button">Play</button>
+        <p class="tiny">The mouse is a reusable low-poly 3D model built from geometry in <code>src/mouse.js</code>.</p>
+      </div>
+    </section>
+
+    <section class="overlay" id="pauseOverlay" aria-label="Game paused">
+      <div class="panel compact">
+        <h2>Paused</h2>
+        <button id="resumeBtn" class="primary" type="button">Resume</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <script type="module" src="game.js"></script>
 </body>
 </html>
