@@ -166,7 +166,7 @@
   function simulatePlants() {
     const births=[];
     const s=season();
-    const eventGrowth=state.event?.type==="bloom"?1.8:state.event?.type==="drought"?.45:1;
+    const eventGrowth = state.event?.type === "bloom" ? 1.8 : (state.event?.type === "drought" ? 0.45 : 1);
     for(let y=0;y<CONFIG.size;y++) for(let x=0;x<CONFIG.size;x++) {
       const c=state.grid[y][x];
       if(c.terrain==="water") continue;
@@ -192,7 +192,7 @@
     state.animals.forEach((a,i)=>{
       a.age++;
       a.cooldown=Math.max(0,a.cooldown-1);
-      a.energy-=a.type==="herb"?.22:.28;
+      a.energy -= a.type === "herb" ? 0.22 : 0.28;
 
       if(a.type==="herb") {
         const here=state.grid[a.y][a.x];
