@@ -105,27 +105,26 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
   }
 
   function createSky(){
-    // Use a Babylon background layer instead of a mapped sphere.
-    // This guarantees the panorama is visible and avoids UV/projection issues.
-    const layer = new BABYLON.Layer(
-      "sky-background",
-      "./assets/sky.webp?v=4",
-      scene,
-      true
-    );
-    layer.isBackground = true;
-    layer.texture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
-    layer.texture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
-
-    // Keep a pleasant fallback in case the image is unavailable.
+    // Sky is cosmetic: it must never prevent gameplay from starting.
     scene.clearColor = new BABYLON.Color4(.42,.72,.90,1);
-
-    layer.texture.onLoadObservable.addOnce(function(){
-      console.info("Sky background loaded");
-    });
-    layer.texture.onErrorObservable.addOnce(function(message,error){
-      console.error("Sky background failed to load",message,error);
-    });
+    try{
+      const layer = new BABYLON.Layer(
+        "sky-background",
+        "./assets/sky.webp?v=5",
+        scene,
+        true
+      );
+      layer.isBackground = true;
+      if(layer.texture){
+        layer.texture.wrapU = BABYLON.Texture.CLAMP_ADDRESSMODE;
+        layer.texture.wrapV = BABYLON.Texture.CLAMP_ADDRESSMODE;
+      }
+      console.info("Sky background initialized");
+      return layer;
+    }catch(error){
+      console.warn("Sky background unavailable; using blue fallback.",error);
+      return null;
+    }
   }
 
   function makeMaterials(){
@@ -1099,9 +1098,12 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
       scene.render();
     });
   }catch(error){
-    console.error(error);
+    console.error("Mini World startup failed:",error);
     ui.startOverlay.classList.add("show");
     const panel=ui.startOverlay.querySelector(".panel");
-    if(panel) panel.innerHTML="<h1>3D unavailable</h1><p>Babylon.js could not start on this device.</p>";
+    if(panel){
+      const detail = error && error.message ? error.message : String(error);
+      panel.innerHTML="<h1>Game startup error</h1><p>"+detail.replace(/[&<>]/g,function(ch){return ({'&':'&amp;','<':'&lt;','>':'&gt;'})[ch];})+"</p><p class='tiny'>The exact error is also in DevTools Console.</p>";
+    }
   }
 })();
