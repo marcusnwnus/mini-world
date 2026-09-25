@@ -105,7 +105,6 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
   }
 
   function createSky(){
-    if(!window.MiniWorldSkyData) return;
     const sky=BABYLON.MeshBuilder.CreateSphere("sky",{
       diameter:115,
       segments:24,
@@ -122,18 +121,19 @@ import HavokPhysics from "https://cdn.jsdelivr.net/npm/@babylonjs/havok@1.3.14/+
     skyMat.emissiveColor=new BABYLON.Color3(1,1,1);
 
     const tex=new BABYLON.Texture(
-      window.MiniWorldSkyData,
+      "./assets/sky.webp?v=2",
       scene,
       false,
       false,
-      BABYLON.Texture.BILINEAR_SAMPLINGMODE
+      BABYLON.Texture.BILINEAR_SAMPLINGMODE,
+      function(){ console.info("Sky texture loaded"); },
+      function(message,error){ console.error("Sky texture failed to load",message,error); }
     );
     tex.wrapU=BABYLON.Texture.WRAP_ADDRESSMODE;
     tex.wrapV=BABYLON.Texture.CLAMP_ADDRESSMODE;
     tex.vScale=-1;
     tex.vOffset=1;
     skyMat.emissiveTexture=tex;
-    skyMat.diffuseTexture=tex;
     sky.material=skyMat;
     sky.rotation.y=Math.PI;
     sky.renderingGroupId=0;
