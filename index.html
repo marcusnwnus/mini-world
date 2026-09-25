@@ -74,7 +74,7 @@
           <span>🐭 Mouse</span><i>→</i><span>🐇 Rabbit</span><i>→</i><span>🦊 Fox</span><i>→</i><span>🐺 Wolf</span>
         </div>
         <button id="playBtn" class="primary" type="button">Play</button>
-        <p class="tiny">The mouse is a reusable Babylon.js low-poly model built from geometry in <code>src/mouse.js</code>.</p>
+        <p class="tiny">The player mouse now uses a rigged GLB with idle, run, bite, hit and death animations; the procedural model remains as a fallback.</p>
       </div>
     </section>
 
@@ -89,7 +89,8 @@
   </main>
 
   <script src="https://cdn.jsdelivr.net/npm/babylonjs@9.27.1/babylon.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/babylonjs-loaders@9.27.1/babylonjs.loaders.min.js"></script>
   <script src="src/mouse.js?v=babylon-1"></script>
-  <script src="src/main-babylon.js?v=babylon-1"></script>
+  <script type="module" src="src/main-babylon-havok.js?v=havok-glb-1"></script>
 </body>
 </html>
