@@ -81,7 +81,7 @@
     ];
     const tail = BABYLON.MeshBuilder.CreateTube(
       "mouse-tail",
-      { path: tailPath, radius: 0.055, tessellation: 6, cap: BABYLON.Mesh.CAP_ROUND },
+      { path: tailPath, radius: 0.055, tessellation: 6, cap: BABYLON.Mesh.CAP_ALL },
       scene
     );
     tail.material = materials.mouseEar;
