@@ -1,0 +1,556 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mini World — Ecosystem Balance</title>
+<style>
+  :root {
+    --bg:#0b1020;
+    --panel:#121a2e;
+    --panel2:#17223b;
+    --text:#ecf3ff;
+    --muted:#8fa3c7;
+    --line:#283754;
+    --good:#6ee7a8;
+    --warn:#ffd166;
+    --bad:#ff6b7a;
+    --plant:#57c96f;
+    --herb:#f6c453;
+    --carn:#ef6f6c;
+    --water:#4b8dff;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0;
+    min-height:100vh;
+    color:var(--text);
+    background:
+      radial-gradient(circle at 20% 0%, #14264b 0, transparent 34%),
+      radial-gradient(circle at 100% 20%, #1a3147 0, transparent 30%),
+      var(--bg);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  button { font:inherit; }
+  .app {
+    width:min(1180px, calc(100% - 24px));
+    margin:0 auto;
+    padding:24px 0 36px;
+  }
+  header {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:18px;
+  }
+  h1 { margin:0 0 6px; font-size:clamp(28px,5vw,48px); letter-spacing:-.04em; }
+  .sub { color:var(--muted); max-width:720px; line-height:1.45; }
+  .badge {
+    border:1px solid var(--line);
+    background:#10182a;
+    padding:9px 12px;
+    border-radius:999px;
+    color:var(--muted);
+    white-space:nowrap;
+  }
+  .layout { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:18px; }
+  .card {
+    background:linear-gradient(180deg, rgba(23,34,59,.96), rgba(15,23,40,.96));
+    border:1px solid var(--line);
+    border-radius:20px;
+    box-shadow:0 18px 45px rgba(0,0,0,.22);
+  }
+  .world-card { padding:14px; }
+  .world-head { display:flex; justify-content:space-between; gap:12px; align-items:center; padding:4px 4px 12px; }
+  .stats-inline { color:var(--muted); font-size:14px; }
+  canvas {
+    width:100%;
+    aspect-ratio: 1 / 1;
+    display:block;
+    border-radius:14px;
+    background:#0d1723;
+    image-rendering:pixelated;
+    touch-action:none;
+  }
+  .sidebar { display:flex; flex-direction:column; gap:14px; }
+  .section { padding:16px; }
+  .section h2 { font-size:15px; margin:0 0 12px; color:#dce7fb; }
+  .meters { display:grid; gap:10px; }
+  .meter-row { display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center; }
+  .meter-label { font-size:13px; color:var(--muted); }
+  .meter-val { font-weight:800; font-size:14px; }
+  .bar { grid-column:1/-1; height:8px; border-radius:999px; background:#0c1423; overflow:hidden; border:1px solid #263550; }
+  .fill { height:100%; width:0; transition:width .2s ease; }
+  .fill.plant { background:var(--plant); }
+  .fill.herb { background:var(--herb); }
+  .fill.carn { background:var(--carn); }
+  .fill.stability { background:linear-gradient(90deg,var(--bad),var(--warn),var(--good)); }
+  .score {
+    font-size:34px;
+    font-weight:900;
+    letter-spacing:-.04em;
+    margin:2px 0;
+  }
+  .status { color:var(--muted); line-height:1.4; min-height:40px; }
+  .controls { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .controls button, .row button {
+    border:1px solid var(--line);
+    color:var(--text);
+    background:#18243c;
+    border-radius:12px;
+    padding:11px 10px;
+    cursor:pointer;
+    transition:.15s ease;
+  }
+  .controls button:hover, .row button:hover { transform:translateY(-1px); border-color:#45618f; background:#1c2a47; }
+  .controls button:active, .row button:active { transform:translateY(0); }
+  .controls button.active { outline:2px solid #7ba6ff; background:#22365d; }
+  .controls button span { display:block; font-size:12px; color:var(--muted); margin-top:3px; }
+  .row { display:flex; gap:8px; margin-top:10px; }
+  .row button { flex:1; }
+  .danger { color:#ffd7dc !important; }
+  .legend { display:flex; flex-wrap:wrap; gap:8px 12px; font-size:13px; color:var(--muted); }
+  .dot { width:10px; height:10px; border-radius:50%; display:inline-block; margin-right:6px; }
+  .log { max-height:150px; overflow:auto; display:grid; gap:7px; font-size:12px; color:var(--muted); }
+  .log div { padding-bottom:7px; border-bottom:1px solid rgba(40,55,84,.6); }
+  footer { margin-top:16px; text-align:center; color:#7085a8; font-size:12px; }
+  @media (max-width:900px) {
+    .layout { grid-template-columns:1fr; }
+    .sidebar { display:grid; grid-template-columns:1fr 1fr; }
+  }
+  @media (max-width:640px) {
+    .app { width:min(100% - 14px,1180px); padding-top:12px; }
+    header { flex-direction:column; }
+    .sidebar { grid-template-columns:1fr; }
+    .world-card { padding:8px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Mini World</h1>
+      <div class="sub">Keep a living ecosystem in balance. Plants feed herbivores. Herbivores feed carnivores. Push one population too far and the whole world can collapse.</div>
+    </div>
+    <div class="badge" id="dayBadge">Day 1</div>
+  </header>
+
+  <main class="layout">
+    <section class="card world-card">
+      <div class="world-head">
+        <strong>Ecosystem</strong>
+        <div class="stats-inline">Click a tile after choosing a tool</div>
+      </div>
+      <canvas id="world" width="720" height="720" aria-label="ecosystem simulation"></canvas>
+    </section>
+
+    <aside class="sidebar">
+      <section class="card section">
+        <h2>Stability</h2>
+        <div class="score"><span id="stability">0</span>%</div>
+        <div class="status" id="status">Building the first food web…</div>
+        <div class="bar" style="margin-top:10px"><div class="fill stability" id="stabilityBar"></div></div>
+      </section>
+
+      <section class="card section">
+        <h2>Populations</h2>
+        <div class="meters">
+          <div class="meter-row">
+            <div class="meter-label">Vegetation</div><div class="meter-val" id="plantCount">0</div>
+            <div class="bar"><div class="fill plant" id="plantBar"></div></div>
+          </div>
+          <div class="meter-row">
+            <div class="meter-label">Herbivores</div><div class="meter-val" id="herbCount">0</div>
+            <div class="bar"><div class="fill herb" id="herbBar"></div></div>
+          </div>
+          <div class="meter-row">
+            <div class="meter-label">Carnivores</div><div class="meter-val" id="carnCount">0</div>
+            <div class="bar"><div class="fill carn" id="carnBar"></div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2>Player actions</h2>
+        <div class="controls" id="controls">
+          <button data-tool="plant">🌱 Plant<span>Add vegetation</span></button>
+          <button data-tool="herb">🐇 Herbivore<span>Add grazer</span></button>
+          <button data-tool="carn">🦊 Carnivore<span>Add predator</span></button>
+          <button data-tool="remove" class="danger">✖ Remove<span>Clear a tile</span></button>
+        </div>
+        <div class="row">
+          <button id="rainBtn">🌧 Rain</button>
+          <button id="pauseBtn">⏸ Pause</button>
+        </div>
+        <div class="row">
+          <button id="resetBtn" class="danger">↻ New World</button>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2>Legend</h2>
+        <div class="legend">
+          <span><i class="dot" style="background:var(--plant)"></i>Plant</span>
+          <span><i class="dot" style="background:var(--herb)"></i>Herbivore</span>
+          <span><i class="dot" style="background:var(--carn)"></i>Carnivore</span>
+          <span><i class="dot" style="background:var(--water)"></i>Water</span>
+        </div>
+      </section>
+
+      <section class="card section">
+        <h2>World log</h2>
+        <div class="log" id="log"></div>
+      </section>
+    </aside>
+  </main>
+
+  <footer>Runs entirely in your browser • autosaves locally • no backend required</footer>
+</div>
+
+<script>
+(() => {
+  const N = 30;
+  const SAVE_KEY = "mini-world-v1";
+  const canvas = document.getElementById("world");
+  const ctx = canvas.getContext("2d");
+  const cell = canvas.width / N;
+  const $ = id => document.getElementById(id);
+
+  let grid = [];
+  let animals = [];
+  let day = 1;
+  let tick = 0;
+  let paused = false;
+  let rainBoost = 0;
+  let selectedTool = "plant";
+  let logs = [];
+
+  const rand = n => Math.floor(Math.random() * n);
+  const clamp = (v,a,b) => Math.max(a,Math.min(b,v));
+
+  function blankCell(x,y) {
+    const edge = Math.min(x,y,N-1-x,N-1-y);
+    const waterChance = edge < 2 ? .55 : edge < 4 ? .12 : .025;
+    return {
+      terrain: Math.random() < waterChance ? "water" : "land",
+      plant: Math.random() < .34 ? (0.35 + Math.random()*.65) : 0,
+      moisture: .45 + Math.random()*.35
+    };
+  }
+
+  function newWorld() {
+    grid = Array.from({length:N},(_,y)=>Array.from({length:N},(_,x)=>blankCell(x,y)));
+    animals = [];
+    day = 1; tick = 0; rainBoost = 0; paused = false; logs = [];
+    for(let i=0;i<38;i++) spawnAnimal("herb");
+    for(let i=0;i<9;i++) spawnAnimal("carn");
+    addLog("A new ecosystem begins.");
+    save();
+    updateUI();
+    draw();
+  }
+
+  function spawnAnimal(type, x=null, y=null) {
+    if(x === null || y === null) {
+      let tries = 0;
+      do { x = rand(N); y = rand(N); tries++; }
+      while((grid[y][x].terrain === "water" || animalAt(x,y)) && tries < 100);
+      if(tries >= 100) return;
+    }
+    if(grid[y][x].terrain === "water" || animalAt(x,y)) return;
+    animals.push({
+      type, x, y,
+      energy: type === "herb" ? 8 + Math.random()*3 : 11 + Math.random()*4,
+      age: 0,
+      cooldown: rand(8)
+    });
+  }
+
+  function animalAt(x,y, type=null) {
+    return animals.find(a => a.x===x && a.y===y && (!type || a.type===type));
+  }
+
+  function validNeighbors(x,y) {
+    const out = [];
+    for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]) {
+      const nx=x+dx, ny=y+dy;
+      if(nx>=0&&ny>=0&&nx<N&&ny<N&&grid[ny][nx].terrain==="land") out.push([nx,ny]);
+    }
+    return out;
+  }
+
+  function nearestTarget(a, predicate, radius=5) {
+    let best = null, bestD = 999;
+    for(let y=Math.max(0,a.y-radius);y<=Math.min(N-1,a.y+radius);y++) {
+      for(let x=Math.max(0,a.x-radius);x<=Math.min(N-1,a.x+radius);x++) {
+        if(!predicate(x,y)) continue;
+        const d = Math.abs(x-a.x)+Math.abs(y-a.y);
+        if(d < bestD) { bestD=d; best=[x,y]; }
+      }
+    }
+    return best;
+  }
+
+  function stepToward(a, target) {
+    const opts = validNeighbors(a.x,a.y).filter(([x,y]) => !animalAt(x,y));
+    if(!opts.length) return;
+    let chosen;
+    if(target) {
+      opts.sort((p,q)=>
+        (Math.abs(p[0]-target[0])+Math.abs(p[1]-target[1])) -
+        (Math.abs(q[0]-target[0])+Math.abs(q[1]-target[1]))
+      );
+      chosen = opts[0];
+    } else chosen = opts[rand(opts.length)];
+    a.x=chosen[0]; a.y=chosen[1];
+  }
+
+  function simulatePlants() {
+    const births = [];
+    for(let y=0;y<N;y++) for(let x=0;x<N;x++) {
+      const c = grid[y][x];
+      if(c.terrain==="water") continue;
+      c.moisture = clamp(c.moisture + (Math.random()-.52)*.03 + rainBoost, .05, 1);
+      if(c.plant > 0) {
+        c.plant = clamp(c.plant + .018*c.moisture, 0, 1);
+        if(c.plant > .72 && Math.random() < .018*c.moisture) {
+          const opts = validNeighbors(x,y).filter(([nx,ny])=>grid[ny][nx].plant<.12);
+          if(opts.length) births.push(opts[rand(opts.length)]);
+        }
+      } else if(Math.random() < .0015*c.moisture) {
+        c.plant = .15;
+      }
+    }
+    births.forEach(([x,y])=> grid[y][x].plant = Math.max(grid[y][x].plant,.18));
+    rainBoost *= .88;
+  }
+
+  function simulateAnimals() {
+    const newborns = [];
+    const deaths = new Set();
+
+    animals.forEach((a,i) => {
+      a.age++;
+      a.cooldown = Math.max(0,a.cooldown-1);
+      a.energy -= a.type==="herb" ? .23 : .29;
+
+      if(a.type==="herb") {
+        const here = grid[a.y][a.x];
+        if(here.plant > .12) {
+          const bite = Math.min(.3, here.plant);
+          here.plant -= bite;
+          a.energy += bite*4.4;
+        } else {
+          const food = nearestTarget(a,(x,y)=>grid[y][x].plant>.25,5);
+          stepToward(a,food);
+        }
+        if(a.energy > 10.5 && a.cooldown===0 && Math.random()<.055) {
+          const opts=validNeighbors(a.x,a.y).filter(([x,y])=>!animalAt(x,y));
+          if(opts.length) {
+            const [x,y]=opts[rand(opts.length)];
+            newborns.push({type:"herb",x,y,energy:5.5,age:0,cooldown:10});
+            a.energy-=3.8; a.cooldown=10;
+          }
+        }
+      } else {
+        const preyHere = animals.find((b,j)=>j!==i&&!deaths.has(j)&&b.type==="herb"&&b.x===a.x&&b.y===a.y);
+        if(preyHere) {
+          deaths.add(animals.indexOf(preyHere));
+          a.energy += 6.2;
+        } else {
+          const preyPos = nearestTarget(a,(x,y)=>!!animalAt(x,y,"herb"),7);
+          stepToward(a,preyPos);
+          const preyAfter = animals.find((b,j)=>j!==i&&!deaths.has(j)&&b.type==="herb"&&b.x===a.x&&b.y===a.y);
+          if(preyAfter) {
+            deaths.add(animals.indexOf(preyAfter));
+            a.energy += 6.2;
+          }
+        }
+        if(a.energy > 14 && a.cooldown===0 && Math.random()<.038) {
+          const opts=validNeighbors(a.x,a.y).filter(([x,y])=>!animalAt(x,y));
+          if(opts.length) {
+            const [x,y]=opts[rand(opts.length)];
+            newborns.push({type:"carn",x,y,energy:7,age:0,cooldown:14});
+            a.energy-=5; a.cooldown=14;
+          }
+        }
+      }
+
+      if(a.energy<=0 || a.age>(a.type==="herb"?240:280)) deaths.add(i);
+    });
+
+    animals = animals.filter((_,i)=>!deaths.has(i));
+    animals.push(...newborns);
+  }
+
+  function populations() {
+    let plant=0;
+    for(const row of grid) for(const c of row) if(c.terrain==="land"&&c.plant>.08) plant++;
+    const herb=animals.filter(a=>a.type==="herb").length;
+    const carn=animals.filter(a=>a.type==="carn").length;
+    return {plant,herb,carn};
+  }
+
+  function stabilityScore() {
+    const p=populations();
+    const land = grid.flat().filter(c=>c.terrain==="land").length || 1;
+    const plantRatio = p.plant/land;
+    const herbPerPlant = p.herb/Math.max(1,p.plant);
+    const carnPerHerb = p.carn/Math.max(1,p.herb);
+    const s1 = 1 - Math.min(1,Math.abs(plantRatio-.48)/.48);
+    const s2 = 1 - Math.min(1,Math.abs(herbPerPlant-.11)/.16);
+    const s3 = 1 - Math.min(1,Math.abs(carnPerHerb-.22)/.28);
+    let score = (s1*.42+s2*.32+s3*.26)*100;
+    if(p.plant<20||p.herb<3||p.carn<1) score*=.35;
+    return Math.round(clamp(score,0,100));
+  }
+
+  function statusText(s,p) {
+    if(p.plant<35) return "Vegetation is collapsing. Plant or trigger rain.";
+    if(p.herb<4) return "Herbivores are nearly gone. Add grazers before predators starve.";
+    if(p.carn<1) return "No predators remain. Herbivores may overgraze the world.";
+    if(p.carn > p.herb*.55) return "Predator pressure is very high.";
+    if(p.herb > p.plant*.2) return "Herbivores are consuming vegetation too quickly.";
+    if(s>82) return "Excellent balance. The food web is resilient.";
+    if(s>62) return "The ecosystem is stable, but keep watching the ratios.";
+    return "The ecosystem is under stress. Small adjustments work best.";
+  }
+
+  function addLog(msg) {
+    logs.unshift("Day "+day+": "+msg);
+    logs=logs.slice(0,10);
+    $("log").innerHTML=logs.map(x=>"<div>"+x+"</div>").join("");
+  }
+
+  function updateUI() {
+    const p=populations(), s=stabilityScore();
+    $("plantCount").textContent=p.plant;
+    $("herbCount").textContent=p.herb;
+    $("carnCount").textContent=p.carn;
+    $("stability").textContent=s;
+    $("stabilityBar").style.width=s+"%";
+    $("plantBar").style.width=Math.min(100,p.plant/4.5)+"%";
+    $("herbBar").style.width=Math.min(100,p.herb*1.5)+"%";
+    $("carnBar").style.width=Math.min(100,p.carn*5)+"%";
+    $("status").textContent=statusText(s,p);
+    $("dayBadge").textContent="Day "+day;
+    $("pauseBtn").textContent=paused?"▶ Resume":"⏸ Pause";
+  }
+
+  function draw() {
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    for(let y=0;y<N;y++) for(let x=0;x<N;x++) {
+      const c=grid[y][x], px=x*cell, py=y*cell;
+      if(c.terrain==="water") {
+        const wave=Math.sin((x+y+tick*.25)*.7)*7;
+        ctx.fillStyle="rgb("+(45+wave)+","+(101+wave)+","+(190+wave)+")";
+      } else {
+        const moisture=c.moisture*22;
+        ctx.fillStyle="rgb("+(54-moisture*.25)+","+(79+moisture)+","+(51-moisture*.08)+")";
+      }
+      ctx.fillRect(px,py,cell+1,cell+1);
+      if(c.terrain==="land"&&c.plant>.08) {
+        const r=2.5+5*c.plant;
+        ctx.fillStyle="#57c96f";
+        ctx.beginPath(); ctx.arc(px+cell*.5,py+cell*.53,r,0,Math.PI*2); ctx.fill();
+        if(c.plant>.72) {
+          ctx.fillStyle="#9ee493";
+          ctx.beginPath(); ctx.arc(px+cell*.63,py+cell*.38,2.1,0,Math.PI*2); ctx.fill();
+        }
+      }
+    }
+
+    animals.forEach(a=>{
+      const cx=a.x*cell+cell/2, cy=a.y*cell+cell/2;
+      ctx.fillStyle=a.type==="herb"?"#f6c453":"#ef6f6c";
+      ctx.beginPath(); ctx.arc(cx,cy,cell*.31,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle="#0b1020";
+      ctx.beginPath(); ctx.arc(cx+cell*.1,cy-cell*.05,1.6,0,Math.PI*2); ctx.fill();
+      if(a.type==="carn") {
+        ctx.strokeStyle="#ffd5d3"; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(cx-cell*.14,cy-cell*.24);ctx.lineTo(cx-cell*.03,cy-cell*.39);ctx.lineTo(cx+cell*.02,cy-cell*.21);ctx.stroke();
+      }
+    });
+
+    ctx.strokeStyle="rgba(255,255,255,.035)";
+    ctx.lineWidth=1;
+    for(let i=0;i<=N;i++) {
+      ctx.beginPath(); ctx.moveTo(i*cell,0);ctx.lineTo(i*cell,canvas.height);ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0,i*cell);ctx.lineTo(canvas.width,i*cell);ctx.stroke();
+    }
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({grid,animals,day,tick,rainBoost,logs}));
+    } catch(e) {}
+  }
+  function load() {
+    try {
+      const s=JSON.parse(localStorage.getItem(SAVE_KEY));
+      if(!s||!Array.isArray(s.grid)||s.grid.length!==N) return false;
+      ({grid,animals,day,tick,rainBoost,logs}=s);
+      return true;
+    } catch(e) { return false; }
+  }
+
+  canvas.addEventListener("pointerdown", e=>{
+    const rect=canvas.getBoundingClientRect();
+    const x=Math.floor((e.clientX-rect.left)/rect.width*N);
+    const y=Math.floor((e.clientY-rect.top)/rect.height*N);
+    if(x<0||y<0||x>=N||y>=N||grid[y][x].terrain==="water") return;
+    if(selectedTool==="plant") {
+      grid[y][x].plant=1; grid[y][x].moisture=Math.max(.7,grid[y][x].moisture);
+    } else if(selectedTool==="herb") {
+      if(!animalAt(x,y)) spawnAnimal("herb",x,y);
+    } else if(selectedTool==="carn") {
+      if(!animalAt(x,y)) spawnAnimal("carn",x,y);
+    } else {
+      grid[y][x].plant=0;
+      animals=animals.filter(a=>!(a.x===x&&a.y===y));
+    }
+    save(); updateUI(); draw();
+  });
+
+  document.querySelectorAll("[data-tool]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      selectedTool=btn.dataset.tool;
+      document.querySelectorAll("[data-tool]").forEach(b=>b.classList.toggle("active",b===btn));
+    });
+  });
+  document.querySelector('[data-tool="plant"]').classList.add("active");
+
+  $("rainBtn").addEventListener("click",()=>{
+    rainBoost=Math.min(.04,rainBoost+.012);
+    addLog("Rain increased soil moisture.");
+  });
+  $("pauseBtn").addEventListener("click",()=>{paused=!paused;updateUI();});
+  $("resetBtn").addEventListener("click",()=>{
+    if(confirm("Start a completely new ecosystem?")) newWorld();
+  });
+
+  if(!load()) newWorld();
+  else { updateUI(); draw(); addLog("Saved world restored."); }
+
+  setInterval(()=>{
+    if(paused) return;
+    tick++;
+    simulatePlants();
+    simulateAnimals();
+    if(tick%6===0) {
+      day++;
+      const p=populations();
+      if(p.herb===0) addLog("Herbivores went extinct.");
+      else if(p.carn===0) addLog("Carnivores disappeared from the food web.");
+      else if(stabilityScore()>85 && day%5===0) addLog("The ecosystem is thriving.");
+      updateUI();
+      save();
+    }
+    draw();
+  },650);
+})();
+</script>
+</body>
+</html>
