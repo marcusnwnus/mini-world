@@ -5,7 +5,7 @@ import math
 import os
 import struct
 
-OUT = os.path.join(os.path.dirname(__file__), "..", "assets", "mouse.glb")
+OUT = os.path.join(os.path.dirname(__file__), "..", "assets", "mouse-v3.glb")
 os.makedirs(os.path.dirname(OUT), exist_ok=True)
 
 vertices = []
@@ -203,13 +203,13 @@ gltf = {
     "scene": 0,
     "scenes": [{"nodes": [0,4]}],
     "nodes": [
-        {"name": "Armature", "children": [1,2,3]},
-        {"name": "BodyJoint"},
+        {"name": "Armature", "children": [1]},
+        {"name": "BodyJoint", "children": [2,3]},
         {"name": "HeadJoint", "translation": [0,.72,.82]},
         {"name": "TailJoint", "translation": [0,.52,-.90]},
         {"name": "MouseMesh", "mesh": 0, "skin": 0}
     ],
-    "skins": [{"name": "MouseRig", "inverseBindMatrices": ibm_acc, "joints": [1,2,3]}],
+    "skins": [{"name": "MouseRig", "inverseBindMatrices": ibm_acc, "joints": [1,2,3], "skeleton": 1}],
     "meshes": [{
         "name": "Mouse",
         "primitives": [{
