@@ -407,9 +407,17 @@ function updatePlayer(dt,time){
   player.moveSpeed=input.len*t.speed;
 
   if(input.len>.04){
-    player.group.position.x+=input.x*t.speed*dt;
-    player.group.position.z+=input.z*t.speed*dt;
-    const desired=Math.atan2(input.x,input.z);
+    const cameraForward=new THREE.Vector3().subVectors(player.group.position,camera.position);
+    cameraForward.y=0;
+    cameraForward.normalize();
+    const cameraRight=new THREE.Vector3().crossVectors(cameraForward,new THREE.Vector3(0,1,0)).normalize();
+    const moveDir=new THREE.Vector3()
+      .addScaledVector(cameraRight,input.x)
+      .addScaledVector(cameraForward,-input.z);
+    if(moveDir.lengthSq()>1) moveDir.normalize();
+
+    player.group.position.addScaledVector(moveDir,t.speed*dt);
+    const desired=Math.atan2(moveDir.x,moveDir.z);
     player.group.rotation.y+=shortestAngle(player.group.rotation.y,desired)*Math.min(1,dt*12);
   }
 
